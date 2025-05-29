@@ -44,7 +44,7 @@ func main() {
 	})
 
 	// API endpoint to get all customers
-	http.HandleFunc("/api/customers", getCustomers)
+	http.HandleFunc("/api/customers", handleCustomers)
 
 	// Start the server
 	fmt.Println("Server starting on http://localhost:8080")
@@ -52,11 +52,33 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-// Function to handle GET /api/customers
-func getCustomers(w http.ResponseWriter, r *http.Request) {
-	// Set response header to JSON
+// Function to handle both GET and POST for /api/customers
+func handleCustomers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Convert customers to JSON and send response
-	json.NewEncoder(w).Encode(customers)
+	if r.Method == "GET" {
+		// GET request - return all customers
+		json.NewEncoder(w).Encode(customers)
+	} else if r.Method == "POST" {
+		// POST request - create new customer
+		var newCustomer Customer
+
+		// Read JSON from request body
+		err := json.NewDecoder(r.Body).Decode(&newCustomer)
+		if err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		// Assign ID and add to our list
+		newCustomer.ID = nextID
+		nextID++
+		customers = append(customers, newCustomer)
+
+		// Return the created customer
+		json.NewEncoder(w).Encode(newCustomer)
+	} else {
+		// Other methods not allowed
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
